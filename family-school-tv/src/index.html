@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family School</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            background: #3D052C;
+        }
+        #webview {
+            width: 1920px;
+            height: 1080px;
+            border: none;
+        }
+        #loading {
+            position: fixed;
+            top: 0; left: 0;
+            width: 1920px;
+            height: 1080px;
+            background: #3D052C;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        #loading img {
+            width: 200px;
+            height: 200px;
+            border-radius: 30px;
+            margin-bottom: 40px;
+        }
+        #loading p {
+            color: #FFD700;
+            font-size: 32px;
+            font-family: Arial, sans-serif;
+            letter-spacing: 2px;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(255,215,0,0.3);
+            border-top-color: #FFD700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-top: 30px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <p>FAMILY SCHOOL</p>
+        <div class="spinner"></div>
+    </div>
+    <iframe
+        id="webview"
+        src="https://rodrigoejulianelopes.com/login-v1/"
+        allowfullscreen
+        style="display:none;">
+    </iframe>
+
+    <script>
+        var iframe = document.getElementById('webview');
+        var loading = document.getElementById('loading');
+
+        iframe.onload = function() {
+            loading.style.display = 'none';
+            iframe.style.display = 'block';
+        };
+
+        // Fallback — esconde loading após 8 segundos
+        setTimeout(function() {
+            loading.style.display = 'none';
+            iframe.style.display = 'block';
+        }, 8000);
+
+        // Navegação com controle remoto Samsung
+        document.addEventListener('keydown', function(e) {
+            switch(e.keyCode) {
+                case 10009: // Botão BACK
+                    try {
+                        iframe.contentWindow.history.back();
+                    } catch(err) {
+                        iframe.src = 'https://rodrigoejulianelopes.com/login-v1/';
+                    }
+                    break;
+                case 10182: // Botão EXIT
+                    tizen.application.getCurrentApplication().exit();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
