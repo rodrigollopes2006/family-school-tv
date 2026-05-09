@@ -27,16 +27,12 @@ jobs:
         run: |
           echo "y" | ./tizen-cli.bin --accept-license $HOME/tizen-studio 2>/dev/null || true
 
-      - name: Generate Author Certificate
+      - name: Restore Author Certificate
         run: |
           mkdir -p $HOME/tizen-studio-data/keystore/author
-          $HOME/tizen-studio/tools/ide/bin/tizen certificate \
-            -a "FamilySchool" \
-            -f familyschool-author \
-            -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" \
-            -n "Rodrigo Lopes" \
-            -e "rodrigo@familyschool.com" \
-            -c US || true
+          echo "${{ secrets.TIZEN_AUTHOR_P12 }}" | base64 -d > $HOME/tizen-studio-data/keystore/author/familyschool-author.p12
+          echo "Certificado restaurado!"
+          ls -la $HOME/tizen-studio-data/keystore/author/
 
       - name: Create Security Profile
         run: |
@@ -53,11 +49,11 @@ jobs:
             -s FamilySchoolProfile \
             -- . || true
           if ls *.wgt 1>/dev/null 2>&1; then
-            echo "WGT assinado encontrado!"
+            echo "WGT ASSINADO COM SUCESSO!"
             cp *.wgt ../../FamilySchool.wgt
           else
-            echo "Criando WGT manual..."
-            zip -r ../../FamilySchool.wgt . -x "*.git*"
+            echo "FALHA NA ASSINATURA"
+            exit 1
           fi
 
       - name: Upload WGT artifact
