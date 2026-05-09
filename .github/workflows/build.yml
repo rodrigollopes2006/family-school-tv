@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install Java (required by Tizen CLI)
+      - name: Install dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y default-jdk unzip zip curl
@@ -25,44 +25,40 @@ jobs:
 
       - name: Install Tizen CLI
         run: |
-          echo "y" | ./tizen-cli.bin --accept-license /opt/tizen-studio 2>/dev/null || true
-          echo "/opt/tizen-studio/tools/ide/bin" >> $GITHUB_PATH
-
-      - name: Install TV Extension
-        run: |
-          /opt/tizen-studio/package-manager/package-manager-cli.bin install \
-            --accept-license "TV-samsung-Extension" 2>/dev/null || true
+          echo "y" | ./tizen-cli.bin --accept-license $HOME/tizen-studio 2>/dev/null || true
 
       - name: Generate Author Certificate
         run: |
-          mkdir -p /root/tizen-studio-data/keystore/author
-          /opt/tizen-studio/tools/ide/bin/tizen certificate \
-            -a "Family School" \
+          mkdir -p $HOME/tizen-studio-data/keystore/author
+          $HOME/tizen-studio/tools/ide/bin/tizen certificate \
+            -a "FamilySchool" \
             -f familyschool-author \
             -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" \
             -n "Rodrigo Lopes" \
             -e "rodrigo@familyschool.com" \
-            -c US 2>/dev/null || true
+            -c US || true
 
       - name: Create Security Profile
         run: |
-          /opt/tizen-studio/tools/ide/bin/tizen security-profiles add \
+          $HOME/tizen-studio/tools/ide/bin/tizen security-profiles add \
             -n FamilySchoolProfile \
-            -a /root/tizen-studio-data/keystore/author/familyschool-author.p12 \
-            -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" 2>/dev/null || true
+            -a $HOME/tizen-studio-data/keystore/author/familyschool-author.p12 \
+            -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" || true
 
       - name: Build and Sign WGT
         run: |
           cd family-school-tv/src
-          /opt/tizen-studio/tools/ide/bin/tizen package \
+          $HOME/tizen-studio/tools/ide/bin/tizen package \
             -t wgt \
             -s FamilySchoolProfile \
-            -- . 2>/dev/null || true
-          ls -la *.wgt 2>/dev/null || echo "WGT not found, trying manual zip"
-          if [ ! -f *.wgt ]; then
-            zip -r FamilySchool.wgt . -x "*.git*"
+            -- . || true
+          if ls *.wgt 1>/dev/null 2>&1; then
+            echo "WGT assinado encontrado!"
+            cp *.wgt ../../FamilySchool.wgt
+          else
+            echo "Criando WGT manual..."
+            zip -r ../../FamilySchool.wgt . -x "*.git*"
           fi
-          cp *.wgt ../../FamilySchool.wgt
 
       - name: Upload WGT artifact
         uses: actions/upload-artifact@v4
