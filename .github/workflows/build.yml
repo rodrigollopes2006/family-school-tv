@@ -1,46 +1,38 @@
 name: Build Tizen TV App
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y default-jdk unzip zip curl
-
       - name: Download Tizen CLI
         run: |
           curl -L "https://download.tizen.org/sdk/Installer/tizen-studio_5.6/web-cli_Tizen_Studio_5.6_ubuntu-64.bin" \
             -o tizen-cli.bin
           chmod +x tizen-cli.bin
-
       - name: Install Tizen CLI
         run: |
           echo "y" | ./tizen-cli.bin --accept-license $HOME/tizen-studio 2>/dev/null || true
-
       - name: Restore Author Certificate
         run: |
           mkdir -p $HOME/tizen-studio-data/keystore/author
           echo "${{ secrets.TIZEN_AUTHOR_P12 }}" | base64 -d > $HOME/tizen-studio-data/keystore/author/familyschool-author.p12
           echo "Certificado restaurado!"
           ls -la $HOME/tizen-studio-data/keystore/author/
-
       - name: Create Security Profile
         run: |
           $HOME/tizen-studio/tools/ide/bin/tizen security-profiles add \
             -n FamilySchoolProfile \
             -a $HOME/tizen-studio-data/keystore/author/familyschool-author.p12 \
             -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" || true
-
       - name: Build and Sign WGT
         run: |
           cd family-school-tv/src
@@ -48,6 +40,8 @@ jobs:
             -t wgt \
             -s FamilySchoolProfile \
             -- . || true
+          echo "=== CLI LOG ==="
+          cat $HOME/tizen-studio-data/cli/logs/cli.log 2>/dev/null || echo "Log nao encontrado"
           if ls *.wgt 1>/dev/null 2>&1; then
             echo "WGT ASSINADO COM SUCESSO!"
             cp *.wgt ../../FamilySchool.wgt
@@ -55,7 +49,6 @@ jobs:
             echo "FALHA NA ASSINATURA"
             exit 1
           fi
-
       - name: Upload WGT artifact
         uses: actions/upload-artifact@v4
         with:
