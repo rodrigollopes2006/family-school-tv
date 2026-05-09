@@ -21,18 +21,23 @@ jobs:
       - name: Install Tizen CLI
         run: |
           echo "y" | ./tizen-cli.bin --accept-license $HOME/tizen-studio 2>/dev/null || true
-      - name: Restore Author Certificate
+      - name: Restore Certificates
         run: |
           mkdir -p $HOME/tizen-studio-data/keystore/author
+          mkdir -p $HOME/tizen-studio-data/keystore/distributor
           echo "${{ secrets.TIZEN_AUTHOR_P12 }}" | base64 -d > $HOME/tizen-studio-data/keystore/author/familyschool-author.p12
-          echo "Certificado restaurado!"
+          echo "${{ secrets.TIZEN_DISTRIBUTOR_P12 }}" | base64 -d > $HOME/tizen-studio-data/keystore/distributor/tizen-distributor-signer.p12
+          echo "Certificados restaurados!"
           ls -la $HOME/tizen-studio-data/keystore/author/
+          ls -la $HOME/tizen-studio-data/keystore/distributor/
       - name: Create Security Profile
         run: |
           $HOME/tizen-studio/tools/ide/bin/tizen security-profiles add \
             -n FamilySchoolProfile \
             -a $HOME/tizen-studio-data/keystore/author/familyschool-author.p12 \
-            -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" || true
+            -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" \
+            -d $HOME/tizen-studio-data/keystore/distributor/tizen-distributor-signer.p12 \
+            -dp "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" || true
       - name: Build and Sign WGT
         run: |
           cd family-school-tv/src
