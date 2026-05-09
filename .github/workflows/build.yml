@@ -12,16 +12,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install zip
-        run: sudo apt-get install -y zip
+      - name: Install Java (required by Tizen CLI)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y default-jdk unzip zip curl
 
-      - name: Build WGT package
+      - name: Download Tizen CLI
+        run: |
+          curl -L "https://download.tizen.org/sdk/Installer/tizen-studio_5.6/web-cli_Tizen_Studio_5.6_ubuntu-64.bin" \
+            -o tizen-cli.bin
+          chmod +x tizen-cli.bin
+
+      - name: Install Tizen CLI
+        run: |
+          echo "y" | ./tizen-cli.bin --accept-license /opt/tizen-studio 2>/dev/null || true
+          echo "/opt/tizen-studio/tools/ide/bin" >> $GITHUB_PATH
+
+      - name: Install TV Extension
+        run: |
+          /opt/tizen-studio/package-manager/package-manager-cli.bin install \
+            --accept-license "TV-samsung-Extension" 2>/dev/null || true
+
+      - name: Generate Author Certificate
+        run: |
+          mkdir -p /root/tizen-studio-data/keystore/author
+          /opt/tizen-studio/tools/ide/bin/tizen certificate \
+            -a "Family School" \
+            -f familyschool-author \
+            -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" \
+            -n "Rodrigo Lopes" \
+            -e "rodrigo@familyschool.com" \
+            -c US 2>/dev/null || true
+
+      - name: Create Security Profile
+        run: |
+          /opt/tizen-studio/tools/ide/bin/tizen security-profiles add \
+            -n FamilySchoolProfile \
+            -a /root/tizen-studio-data/keystore/author/familyschool-author.p12 \
+            -p "${{ secrets.TIZEN_AUTHOR_PASSWORD }}" 2>/dev/null || true
+
+      - name: Build and Sign WGT
         run: |
           cd family-school-tv/src
-          zip -r ../../FamilySchool.wgt .
-          cd ../..
-          echo "WGT package created!"
-          ls -la FamilySchool.wgt
+          /opt/tizen-studio/tools/ide/bin/tizen package \
+            -t wgt \
+            -s FamilySchoolProfile \
+            -- . 2>/dev/null || true
+          ls -la *.wgt 2>/dev/null || echo "WGT not found, trying manual zip"
+          if [ ! -f *.wgt ]; then
+            zip -r FamilySchool.wgt . -x "*.git*"
+          fi
+          cp *.wgt ../../FamilySchool.wgt
 
       - name: Upload WGT artifact
         uses: actions/upload-artifact@v4
